@@ -1,98 +1,75 @@
-/******************************************************************
-  DHT Temperature & Humidity Sensor library for Arduino.
+/* DHT library
 
-  Features:
-  - Support for DHT11 and DHT22/AM2302/RHT03
-  - Auto detect sensor model
-  - Very low memory footprint
-  - Very small code
+MIT license
+written by Adafruit Industries
+*/
+#ifndef DHT_H
+#define DHT_H
 
-  http://www.github.com/markruys/arduino-DHT
-
-  Written by Mark Ruys, mark@paracas.nl.
-
-  BSD license, check license.txt for more information.
-  All text above must be included in any redistribution.
-
-  Datasheets:
-  - http://www.micro4you.com/files/sensor/DHT11.pdf
-  - http://www.adafruit.com/datasheets/DHT22.pdf
-  - http://dlnmh9ip6v2uc.cloudfront.net/datasheets/Sensors/Weather/RHT03.pdf
-  - http://meteobox.tk/files/AM2302.pdf
-
-  Changelog:
-   2013-06-10: Initial version
-   2013-06-12: Refactored code
-   2013-07-01: Add a resetTimer method
- ******************************************************************/
-
-#include "DHT.cpp";
-
-#ifndef dht_h
-#define dht_h
-
-#if ARDUINO < 100
-  #include <WProgram.h>
+#if ARDUINO >= 100
+ #include "Arduino.h"
 #else
-  #include <Arduino.h>
+ #include "WProgram.h"
 #endif
 
-class DHT
-{
-public:
 
-  typedef enum {
-    AUTO_DETECT,
-    DHT11,
-    DHT22,
-    AM2302,  // Packaged DHT22
-    RHT03    // Equivalent to DHT22
-  }
-  DHT_MODEL_t;
+// Uncomment to enable printing out nice debug messages.
+//#define DHT_DEBUG
 
-  typedef enum {
-    ERROR_NONE = 0,
-    ERROR_TIMEOUT,
-    ERROR_CHECKSUM
-  }
-  DHT_ERROR_t;
+// Define where debug output will be printed.
+#define DEBUG_PRINTER Serial
 
-  void setup(uint8_t pin, DHT_MODEL_t model=AUTO_DETECT);
-  void resetTimer();
+// Setup debug printing macros.
+#ifdef DHT_DEBUG
+  #define DEBUG_PRINT(...) { DEBUG_PRINTER.print(__VA_ARGS__); }
+  #define DEBUG_PRINTLN(...) { DEBUG_PRINTER.println(__VA_ARGS__); }
+#else
+  #define DEBUG_PRINT(...) {}
+  #define DEBUG_PRINTLN(...) {}
+#endif
 
-  float getTemperature();
-  float getHumidity();
+// Define types of sensors.
+#define DHT11 11
+#define DHT22 22
+#define DHT21 21
+#define AM2301 21
 
-  DHT_ERROR_t getStatus() { return error; };
-  const char* getStatusString();
 
-  DHT_MODEL_t getModel() { return model; }
+class DHT {
+  public:
+   DHT(uint8_t pin, uint8_t type, uint8_t count=6);
+   void begin(void);
+   float readTemperature(bool S=false, bool force=false);
+   float convertCtoF(float);
+   float convertFtoC(float);
+   float computeHeatIndex(float temperature, float percentHumidity, bool isFahrenheit=true);
+   float readHumidity(bool force=false);
+   boolean read(bool force=false);
 
-  int getMinimumSamplingPeriod() { return model == DHT11 ? 1000 : 2000; }
+ private:
+  uint8_t data[5];
+  uint8_t _pin, _type;
+  #ifdef __AVR
+    // Use direct GPIO access on an 8-bit AVR so keep track of the port and bitmask
+    // for the digital pin connected to the DHT.  Other platforms will use digitalRead.
+    uint8_t _bit, _port;
+  #endif
+  uint32_t _lastreadtime, _maxcycles;
+  bool _lastresult;
 
-  int8_t getNumberOfDecimalsTemperature() { return model == DHT11 ? 0 : 1; };
-  int8_t getLowerBoundTemperature() { return model == DHT11 ? 0 : -40; };
-  int8_t getUpperBoundTemperature() { return model == DHT11 ? 50 : 125; };
+  uint32_t expectPulse(bool level);
 
-  int8_t getNumberOfDecimalsHumidity() { return 0; };
-  int8_t getLowerBoundHumidity() { return model == DHT11 ? 20 : 0; };
-  int8_t getUpperBoundHumidity() { return model == DHT11 ? 90 : 100; };
-
-  static float toFahrenheit(float fromCelcius) { return 1.8 * fromCelcius + 32.0; };
-  static float toCelsius(float fromFahrenheit) { return (fromFahrenheit - 32.0) / 1.8; };
-
-protected:
-  void readSensor();
-
-  float temperature;
-  float humidity;
-
-  uint8_t pin;
-
-private:
-  DHT_MODEL_t model;
-  DHT_ERROR_t error;
-  unsigned long lastReadTime;
 };
 
-#endif /*dht_h*/
+class InterruptLock {
+  public:
+   InterruptLock() {
+    noInterrupts();
+   }
+   ~InterruptLock() {
+    interrupts();
+   }
+
+};
+
+#endif

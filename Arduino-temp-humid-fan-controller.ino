@@ -1,10 +1,7 @@
-#include <DHT.h>
-
-//#include "DHT.h"           // include dht sensor library
-
+#include "DHT.h"           // include dht sensor library
  
 #define DHTPIN 2           // temp/hum sensor pin
-#define DHTTYPE "DHT22"      // type of DHTxx sensor = DHT 22  (AM2302)
+#define DHTTYPE DHT22      // type of DHTxx sensor = DHT 22  (AM2302)
 #define fan 4              // fan on-off pin (relay)
 #define fanPWM 3           // fanPWM speed control signal pin
 #define heater 5           // heater pin
